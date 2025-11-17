@@ -1,0 +1,9 @@
+# Ignore files
+.env
+__pycache__
+.vscode
+
+# Ignore folder
+volumes/
+data/
+output/
