@@ -117,7 +117,8 @@ def get_llm_and_agent(retriever):
         tools=tools, 
         verbose=True, 
         handle_parsing_errors=True,
-        max_iterations=3)
+        max_iterations=2,
+        )
     
 retriever = get_retriever()
 agent_executor = get_llm_and_agent(retriever)

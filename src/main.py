@@ -9,11 +9,17 @@ from agent import (get_retriever as get_openai_retriever,
 from ollama_local import (get_retriever as get_ollama_retriever, 
                           get_llm_and_agent as get_ollama_agent)
 import os
+import gc
 import torch
 
-torch.cuda.empty_cache()
-os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+os.environ['PYTORCH_ALLOC_CONF'] = 'expandable_segments:True'
 
+def release_memory():
+    if torch.cuda.is_available():
+        gc.collect()
+        torch.cuda.empty_cache()
+        if hasattr(torch.cuda, 'reset_peak_memory_stats'):
+            torch.cuda.reset_peak_memory_stats()
 
 
 def setup_page():
@@ -51,9 +57,9 @@ def setup_sidebar():
         else:
             handle_local_file(use_vihuggingface_embeddings)
 
-        st.header("Collection để query")
+        st.header("Collection to query")
         collection_to_query = st.text_input(
-            "Tên collection trong Milvus: ",
+            "Enter collection name stored Milvus: ",
             "student_handbook",
             help="Nhập tên collection bạn muốn sử dụng để tìm kiếm thông tin"
         )
@@ -61,21 +67,21 @@ def setup_sidebar():
         # Model to answer 
         st.header("Model AI")
         model_choice = st.radio(
-            "Chọn AI model để trả lời:",
-            ["OpenAI GPT-5-nano","Qwen3-4B-Instruct (local)"]
+            "AI model to answer:",
+            ["Qwen3-4B-Instruct (local)", "OpenAI GPT-5-nano"]
         )
         return model_choice, collection_to_query
 
 def handle_upload_file(use_vihuggingface_embeddings: bool):
     collection_name = st.text_input(
-        "Tên collection trong Milvus: ",
+        "Collection name to save in Milvus: ",
         "student_handbook",
         help="Nhập tên collection để lưu trữ dữ liệu trong Milvus",
     )
 
     # File uploader
     uploaded_file = st.file_uploader(
-        "Chọn file dữ liệu",
+        "Upload file",
         type=["json", "pdf"],
         help="Tải lên file handbook định dạng JSON, PDF"
     )
@@ -132,35 +138,30 @@ def setup_chat_interface(model_choice: str):
     return msgs
 
 def handle_user_input(msgs, agent_executor):
-    # Save and display user messages
-    if prompt := st.chat_input("Hãy hỏi tôi bất cứ điều gì về sổ tay sinh viên Thuỷ Lợi !"):
+    prompt = st.chat_input("Hãy hỏi tôi bất cứ điều gì về sổ tay sinh viên Thuỷ Lợi !")
+    
+    if prompt:  
         st.session_state.messages.append({"role": "human", "content": prompt})
-        st.chat_message("human").write(prompt)
+        with st.chat_message("human"):
+            st.write(prompt)
         msgs.add_user_message(prompt)
 
-    with st.chat_message("assistant"):
-        st_callback = StreamlitCallbackHandler(st.container())
-
-        # Get history chat
-        chat_history = [
-            {"role": msgs["role"], "content": msgs["content"]}
-             for msgs in st.session_state.messages[:-1]
-        ]
-
-    # Call AI processing 
-    response = agent_executor.invoke(
-        {
-            "input": prompt,
-            "chat_history": chat_history
-        },
-        {"callbacks": [st_callback]}
-    )
-
-    # Save and display AI response 
-    output = response["output"]
-    st.session_state.messages.append({"role": "assistant", "content": output})
-    msgs.add_ai_message(output)
-    st.write(output)
+        with st.chat_message("assistant"):
+            # Show thinking process in an expander
+            with st.expander(">> Xem quá trình xử lý", expanded=False):
+                st_callback = StreamlitCallbackHandler(st.container())
+                
+                chat_history = msgs.messages[:-1]
+                response = agent_executor.invoke(
+                    {"input": prompt, "chat_history": chat_history},
+                    {"callbacks": [st_callback]}
+                )
+            
+            answer = response["output"]
+            st.session_state.messages.append({"role": "assistant", "content": answer})
+            msgs.add_ai_message(answer)
+            st.write(answer)
+            release_memory()
 
 #  === MAIN FUNCTION ===
 def main():

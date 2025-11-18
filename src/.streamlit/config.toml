@@ -1,0 +1,9 @@
+[theme]
+primaryColor = "#D97757"
+backgroundColor = "#F0EEE6"
+secondaryBackgroundColor = "#E3DACC"
+font="serif"
+
+
+[secrets]
+# files = ["/home/tupham/Documents/Development/Student_Handbook/src/.streamlit/secrets.toml"]
