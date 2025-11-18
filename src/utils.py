@@ -6,7 +6,7 @@ from docling.datamodel.pipeline_options import (PdfPipelineOptions,
 from docling.datamodel.accelerator_options import AcceleratorOptions, AcceleratorDevice
 import os, tempfile
 
-OUTPUT_DIR = "/home/tupham/Documents/Development/Student_Handbook/ouput"
+OUTPUT_DIR = "/home/tupham/Documents/Development/Student_Handbook/output"
 
 def load_data_from_upload(file_object) -> tuple:
     """
