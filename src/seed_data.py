@@ -1,5 +1,4 @@
 from typing import  Union, Any
-from pathlib import Path
 from uuid import uuid4
 from dotenv import load_dotenv
 from langchain_milvus import Milvus
@@ -7,19 +6,12 @@ from langchain_core.documents import Document
 from langchain_classic.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_openai.embeddings import OpenAIEmbeddings
-from docling.document_converter import DocumentConverter, PdfFormatOption
-from docling.datamodel.base_models import InputFormat
-from streamlit import markdown
 from utils import load_data_from_upload
-import json
-
+import streamlit as st
 load_dotenv()
 
 
-def load_data_from_local(file_path: str):
-    pass
-
-
+@st.cache_resource
 def seed_milvus(URI_link: str, collection_name: str, file_source: Union[str, Any], use_vihuggingface: bool = False ) -> Milvus:
     """
     Hàm tạo và lưu vector embeddings vào Milvus từ dữ liệu local

@@ -39,10 +39,8 @@ def load_data_from_upload(file_object) -> tuple:
             tmp_file.write(file_object.read())
             tmp_path = tmp_file.name
         
-        # Convert từ file path
         result = converter.convert(tmp_path)
-        
-        # Xóa file tạm
+
         os.unlink(tmp_path)
         
     except Exception as e:
@@ -65,3 +63,6 @@ def load_data_from_upload(file_object) -> tuple:
     print(f"Đã lưu Markdown: {output_file_path}")
 
     return markdown_text, doc_name
+
+def load_data_from_local(filename: str, directory: str):
+    pass

@@ -59,11 +59,11 @@ def get_retriever(collection_name: str = "student_handbook"):
         ]
         return BM25Retriever.from_documents(default_doc)
     
-    
+
 def get_llm_and_agent(retriever):
     tool = create_retriever_tool(
         retriever,
-        "find",
+        "find_documents",
         "Search for information of Student Handbook"
     )
 
@@ -117,7 +117,7 @@ def get_llm_and_agent(retriever):
         tools=tools, 
         verbose=True, 
         handle_parsing_errors=True,
-        max_iterations=2,
+        max_iterations=3,
         )
     
 retriever = get_retriever()

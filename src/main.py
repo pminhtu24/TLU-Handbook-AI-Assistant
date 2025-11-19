@@ -2,8 +2,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from seed_data import seed_milvus
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
-from langchain_classic.memory import StreamlitChatMessageHistory
-from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from agent import (get_retriever as get_openai_retriever, 
                    get_llm_and_agent as get_openai_agent)
 from ollama_local import (get_retriever as get_ollama_retriever, 
@@ -32,6 +31,7 @@ def setup_page():
 def initialize_app():
     load_dotenv()
     setup_page()
+
 
 def setup_sidebar():
     with st.sidebar:
