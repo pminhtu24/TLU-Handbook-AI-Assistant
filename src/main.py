@@ -1,3 +1,5 @@
+from genericpath import isdir
+from re import L
 import streamlit as st
 from dotenv import load_dotenv
 from seed_data import seed_milvus
@@ -87,7 +89,7 @@ def handle_upload_file(use_vihuggingface_embeddings: bool):
     )
 
     if uploaded_file:
-        st.success(f"Đã tải file {uploaded_file.name} thành công !")
+        st.success(f"Upload file {uploaded_file.name} sucess!")
         file_details = {
             "filename": uploaded_file.name,
             "filetype": uploaded_file.type,
@@ -95,11 +97,11 @@ def handle_upload_file(use_vihuggingface_embeddings: bool):
         }
         st.json(file_details)
 
-        if st.button("Xử lý và lưu dữ liệu vào Milvus", type="primary"):
+        if st.button("Process and store in Milvus", type="primary"):
             if not collection_name:
-                st.error("Vui lòng nhập tên collection trước khi tiếp tục.")
+                st.error("Enter collection name")
                 return
-            with st.spinner("Đang xử lý và lưu dữ liệu vào Milvus..."):
+            with st.spinner("Processing..."):
                 try:
                     seed_milvus(
                         'http://localhost:19530',
@@ -107,14 +109,76 @@ def handle_upload_file(use_vihuggingface_embeddings: bool):
                         uploaded_file,
                         use_vihuggingface=use_vihuggingface_embeddings
                     )
-                    st.success(f"Đã tải dữ liệu thành công vào collection '{collection_name}'!")
+                    st.success(f"Saved to collection successfully '{collection_name}'!")
 
                 except Exception as e:
-                    st.error(f"Lỗi khi lưu dữ liệu vào Milvus: {e}")
+                    st.error(f"Error: {e}")
     return collection_name
 
 def handle_local_file(use_vihuggingface_embeddings: bool):
-    st.info("HEHE chua lam xong ham nay")
+    st.subheader("Load Data from local")
+    collection_name = st.text_input(
+        "Collection name to save in Milvus: ",
+        "student_handbook",
+        help="Nhập tên collection để lưu trữ dữ liệu trong Milvus",
+    )
+
+    directory_path = st.text_input("Directory or single file path: ",
+                                    help="Nhập đường dẫn đến thư mục hoặc file",
+                                    key="directory_path")
+    if directory_path:
+        if os.path.exists(directory_path):
+            if os.path.isdir(directory_path):
+                # Its a directory
+                pdf_files = [f for f in os.listdir(directory_path) if f.lower().endswith('.pdf')]
+                if pdf_files:
+                    st.success(f"Found {len(pdf_files)} PDF files")
+
+                    with st.expander(f"List of {len(pdf_files)} PDF files", expanded=True):
+                        for i, pdf_file in enumerate(pdf_files, 1):
+                            file_path = os.path.join(directory_path, pdf_file)
+                            file_size = os.path.getsize(file_path) / 1024
+                            st.write(f"{i}. **{pdf_file}** - {file_size:.2f} KB")
+                else:
+                    st.warning("The folder does not contain any supported files !")
+            
+            elif directory_path.lower().endswith('.pdf'):
+                # Its a single file
+                st.success("---->Valid File PDF")
+                file_size = os.path.getsize(directory_path) / 1024
+                st.json({
+                    "filename": os.path.basename(directory_path),
+                    "filesize": f"{file_size:.2f} KB",
+                    "full_path": directory_path
+                })
+            else:
+                st.warning("The path is not a folder or PDF file")
+        else:
+            st.warning("The path do es not exist !")
+
+    # Process button
+    if st.button("Process and store in Milvus", type="primary", key="local_btn"):
+        if not collection_name:
+            st.error("Enter collection name")
+            return
+        
+        if not directory_path or not os.path.exists(directory_path):
+            st.error("Invalid path")
+            return
+        
+        with st.spinner("Processing..."):
+            try:
+                seed_milvus(
+                    'http://localhost:19530',
+                    collection_name,
+                    directory_path,  # Can be file or folder
+                    use_vihuggingface=use_vihuggingface_embeddings,
+                    is_local=True
+                )
+                st.success(f"Saved to collection successfully '{collection_name}'!")
+                st.balloons()
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 def setup_chat_interface(model_choice: str):
     st.title("AI Assistant")
@@ -148,7 +212,7 @@ def handle_user_input(msgs, agent_executor):
 
         with st.chat_message("assistant"):
             # Show thinking process in an expander
-            with st.expander(">> Xem quá trình xử lý", expanded=False):
+            with st.expander(">> Xem quá trình xử lý", expanded=True):
                 st_callback = StreamlitCallbackHandler(st.container())
                 
                 chat_history = msgs.messages[:-1]

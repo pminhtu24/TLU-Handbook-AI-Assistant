@@ -75,7 +75,7 @@ def get_llm_and_agent(retriever):
     tools =[tool]
 
     # System prompt template
-    prompt = PromptTemplate.from_template("""You are ChatchatAI - chuyên gia trả lời về sổ tay sinh viên Đại học Thủy Lợi.
+    prompt = PromptTemplate.from_template("""You are ChatChitAI - chuyên gia trả lời về sổ tay sinh viên Đại học Thủy Lợi.
 
         Answer the following questions as best you can. You have access to the following tools:
 
@@ -104,9 +104,11 @@ def get_llm_and_agent(retriever):
         - Be concise and accurate
                                                             
         Begin!
-                                          
+        
+        Use the format instruction above !
+                           
         Previous conversation history: {chat_history}
-        New input: {input}
+        Question: {input}
         {agent_scratchpad}
         """)
         
