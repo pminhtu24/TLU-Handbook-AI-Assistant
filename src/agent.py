@@ -6,6 +6,7 @@ from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.retrievers import BM25Retriever
 from seed_data import connect_to_milvus
+from reranker import ViRanker, CustomRetrieverWithReranker
 from dotenv import load_dotenv
 from pydantic import SecretStr
 import os
@@ -19,7 +20,11 @@ if not OPENAI_API_KEY:
 
 api_key = SecretStr(OPENAI_API_KEY)
 
-def get_retriever(collection_name: str = "student_handbook"):
+def get_retriever(
+        collection_name: str = "student_handbook", 
+        use_rerank: bool = True,
+        top_n: int = 3
+    ):
     """
     Tạo một ensemble retriever kết hợp vector search (Milvus) và BM25
     Args:
@@ -52,6 +57,21 @@ def get_retriever(collection_name: str = "student_handbook"):
             retrievers = [milvus_retriever, bm25_retriever],
             weights = [0.7, 0.3]
         )
+
+        if use_rerank:
+            reranker = ViRanker(
+                model_name="namdp-ptit/ViRanker",
+                top_n = top_n,
+                use_fp16=True,
+                normalize=True
+            )
+
+            final_retriever = CustomRetrieverWithReranker(
+                base_retriever=ensemble_retriever,
+                reranker=reranker
+            )
+            return final_retriever
+
         return ensemble_retriever
     except Exception as e:
         print(f"Lỗi khi khởi tạo retriever: {str(e)}")
