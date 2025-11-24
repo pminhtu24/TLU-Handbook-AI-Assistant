@@ -13,7 +13,7 @@ import os
 import gc
 import torch
 
-os.environ['PYTORCH_ALLOC_CONF'] = 'expandable_segments:True'
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
 def release_memory():
     if torch.cuda.is_available():
@@ -21,7 +21,6 @@ def release_memory():
         torch.cuda.empty_cache()
         if hasattr(torch.cuda, 'reset_peak_memory_stats'):
             torch.cuda.reset_peak_memory_stats()
-
 
 def setup_page():
     st.set_page_config(
@@ -66,13 +65,30 @@ def setup_sidebar():
             help="Nhập tên collection bạn muốn sử dụng để tìm kiếm thông tin"
         )
 
+        # Reranking config
+        st.header("Reranking Settings")
+        use_rerank = st.checkbox(
+            "Use Reranking",
+            value=True,
+            help="Sử dụng model ViRanker để rerank kết quả tìm kiếm, cải thiện độ chính xác"
+
+        )
+        rerank_top_n = 3
+        if use_rerank:
+            rerank_top_n = st.slider(
+                "Nums of documents after reranking",
+                min_value=1,
+                max_value=10,
+                value=3
+            )
+
         # Model to answer 
         st.header("Model AI")
         model_choice = st.radio(
             "AI model to answer:",
             ["Qwen3-4B-Instruct (local)", "OpenAI GPT-5-nano"]
         )
-        return model_choice, collection_to_query
+        return model_choice, collection_to_query, use_rerank, rerank_top_n
 
 def handle_upload_file(use_vihuggingface_embeddings: bool):
     collection_name = st.text_input(
@@ -180,13 +196,19 @@ def handle_local_file(use_vihuggingface_embeddings: bool):
             except Exception as e:
                 st.error(f"Error: {e}")
 
-def setup_chat_interface(model_choice: str):
+def setup_chat_interface(model_choice: str, use_rerank: bool, rerank_top_n: int):
     st.title("AI Assistant")
 
+    caption_parts = []
     if model_choice == "Qwen3-4B-Instruct (local)":
-        st.caption("Đang sử dụng mô hình Qwen3-4B-Instruct chạy local.")
+        caption_parts.append("Qwen3-4B-Instruct (local)")
     else:
-        st.caption("Đang sử dụng mô hình OpenAI GPT-5-nano.")
+        caption_parts.append("OpenAI GPT-5-nano")
+    
+    if use_rerank:
+        caption_parts.append(f"ViRanker (top {rerank_top_n})")
+    
+    st.caption(" | ".join(caption_parts))
 
     msgs = StreamlitChatMessageHistory(key="langchain_messages")
     
@@ -230,14 +252,20 @@ def handle_user_input(msgs, agent_executor):
 #  === MAIN FUNCTION ===
 def main():
     initialize_app()
-    model_choice, collections_to_query = setup_sidebar()
-    msgs = setup_chat_interface(model_choice)
+    model_choice, collections_to_query, use_rerank, rerank_top_n = setup_sidebar()
+    msgs = setup_chat_interface(model_choice, use_rerank, rerank_top_n)
 
     if model_choice == "OpenAI GPT-5-nano":
-        retriever = get_openai_retriever(collections_to_query)
+        retriever = get_openai_retriever(
+            collections_to_query,
+            use_rerank =use_rerank,
+            top_n=rerank_top_n)
         agent_executor = get_openai_agent(retriever)
     else:
-        retriever = get_ollama_retriever(collections_to_query)
+        retriever = get_ollama_retriever(
+            collection_name=collections_to_query,
+            use_rerank=use_rerank,
+            top_n=rerank_top_n)
         agent_executor = get_ollama_agent(retriever)
 
     handle_user_input(msgs, agent_executor)
