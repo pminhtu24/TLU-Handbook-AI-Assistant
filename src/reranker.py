@@ -1,4 +1,6 @@
 from langchain_core.documents import Document
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from FlagEmbedding import FlagReranker
 from typing import List
 import numpy as np
@@ -8,7 +10,7 @@ class ViRanker:
             self, 
             model_name: str = "namdp-ptit/ViRanker",
             top_n: int = 3 ,
-            use_fp16: bool = True,
+            use_fp16: bool = False,
             normalize: bool = True
     ):
         """
@@ -23,7 +25,8 @@ class ViRanker:
         self.normalize = normalize
         self.reranker = FlagReranker(
             model_name,
-            use_fp16=use_fp16
+            use_fp16=use_fp16,
+            device="cpu"
         )
 
     def rerank_documents(
@@ -52,7 +55,7 @@ class ViRanker:
         )
         # convert to list[float] để type checker im mồm
         if scores is None:
-            raise ValueError("Scores returned None, wtf?")
+            raise ValueError("Scores returned None")
         scores = np.atleast_1d(scores).tolist() 
         
         doc_score_pairs = list(zip(documents, scores))
@@ -62,19 +65,20 @@ class ViRanker:
         return [pair[0] for pair in doc_score_pairs[:self.top_n]]
     
 
-class CustomRetrieverWithReranker:
-    """
-    
-    Custom Retriever combining base retriever and re-ranker
-    To integrate with LangChain Agent
-    
-    """
+class CustomRetrieverWithReranker(BaseRetriever):
+    class Config:
+        """Configuration for this pydantic object."""
+        arbitrary_types_allowed = True
 
-    def __init__(self, base_retriever, reranker: ViRanker):
-        self.base_retriever = base_retriever
-        self.reranker = reranker
+    base_retriever: BaseRetriever
+    reranker: ViRanker
 
-    def get_relevant_documents(self, query: str):
-        docs = self.base_retriever.get_relevant_documents(query)
+    def _get_relevant_documents(
+            self, 
+            query: str, 
+            *,  
+            run_manager: CallbackManagerForRetrieverRun | None = None) -> List[Document]:
+        docs = self.base_retriever.invoke(query)
         reranked_docs = self.reranker.rerank_documents(query, docs)
         return reranked_docs
+    
