@@ -6,16 +6,20 @@ from langchain_core.documents import Document
 from seed_data import connect_to_milvus
 from langchain_community.retrievers import BM25Retriever
 from langchain_classic.retrievers import EnsembleRetriever
+from reranker import ViRanker, CustomRetrieverWithReranker
 
-def get_retriever(collection_name: str = "student_handbook"):
+def get_retriever(
+    collection_name: str = "student_handbook",
+    use_rerank: bool = True,
+    top_n: int = 3):
     """
     Args:
-        collection_name (str): Tên collection trong Milvus để truy vấn
+        collection_name (str)
     Returns:
-        EnsembleRetriever: Retriever kết hợp với weights:
+        EnsembleRetriever: Retriever combine with weights:
             - 70% Milvus vector search 
             - 30% BM25 text search 
-
+            - (Optional) ViRanker reranking
     """
     try:
         # Milvus retriever
@@ -23,10 +27,10 @@ def get_retriever(collection_name: str = "student_handbook"):
             'http://localhost:19530',
             collection_name
         )
-
+        k_retriever = 8 if use_rerank else 4
         milvus_retriever = vectorstore.as_retriever(
             search_type = "similarity",
-            search_kwargs= {"k": 4},
+            search_kwargs= {"k": k_retriever},
         )
 
         #Create BM25 retriever from whole documents
@@ -39,14 +43,25 @@ def get_retriever(collection_name: str = "student_handbook"):
             raise ValueError(f"Không tìm thấy documents trong collection '{collection_name}'")
 
         bm25_retriever = BM25Retriever.from_documents(documents)
-        bm25_retriever.k = 4
+        bm25_retriever.k = k_retriever
         
         # Ensemble retriever with weights
         ensemble_retriever = EnsembleRetriever(
             retrievers = [milvus_retriever, bm25_retriever],
             weights=[0.7, 0.3]
         )
-
+        if use_rerank:
+            reranker = ViRanker(
+                model_name="namdp-ptit/ViRanker",
+                top_n=top_n,
+                use_fp16=True,
+                normalize=True
+            )
+            final_retriever = CustomRetrieverWithReranker(
+                base_retriever=ensemble_retriever,
+                reranker=reranker
+            )
+            return final_retriever
         return ensemble_retriever
     except Exception as e:
         print(f"Lỗi khi khởi tạo retriever: {str(e)}")
@@ -122,5 +137,5 @@ def get_llm_and_agent(retriever):
         max_iterations=3,
         )
     
-retriever = get_retriever()
+retriever = get_retriever(use_rerank=True, top_n=3)
 agent_executor = get_llm_and_agent(retriever)
