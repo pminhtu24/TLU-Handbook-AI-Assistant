@@ -53,7 +53,7 @@ class ViRanker:
             pairs,
             normalize=self.normalize
         )
-        # convert to list[float] để type checker im mồm
+        # convert to list[float]
         if scores is None:
             raise ValueError("Scores returned None")
         scores = np.atleast_1d(scores).tolist() 
