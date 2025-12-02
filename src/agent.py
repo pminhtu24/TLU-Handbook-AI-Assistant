@@ -25,11 +25,6 @@ def get_retriever(
         use_rerank: bool = True,
         top_n: int = 3
     ):
-    """
-    Tạo một ensemble retriever kết hợp vector search (Milvus) và BM25
-    Args:
-        collection_name (str): Tên collection trong Milvus để truy vấn
-    """
     try:
         vectorstore = connect_to_milvus(
             'http://localhost:19530',
@@ -47,7 +42,7 @@ def get_retriever(
         ]
 
         if not documents:
-            raise ValueError(f"Không tìm thấy documents trong collection '{collection_name}'")
+            raise ValueError(f"No documents found in collection '{collection_name}'")
         
         bm25_retriever = BM25Retriever.from_documents(documents)
         bm25_retriever.k = 4
@@ -74,11 +69,11 @@ def get_retriever(
 
         return ensemble_retriever
     except Exception as e:
-        print(f"Lỗi khi khởi tạo retriever: {str(e)}")
+        print(f"Error initializing retriever: {str(e)}")
         # Return back to default retriever with document if it errors
         default_doc = [
             Document(
-                page_content="Có lỗi xảy ra khi kết nối database. Vui lòng thử lại sau.",
+                page_content="An error occurred while connecting to the database. Please try again later.",
                 metadata = {"source": "error"}
             )
         ]
@@ -95,10 +90,10 @@ tool = create_retriever_tool(
 def get_llm_and_agent( _retriever, model_choice="gpt-5-nano"):
     
     """
-    Khởi tạo Language Model và Agent với cấu hình cụ thể
+    Initialize Language Model and Agent with specific configuration
     Args:
-        _retriever: Retriever đã được cấu hình để tìm kiếm thông tin
-        model_choice: Lựa chọn model ("gpt5" hoặc "ollama (local)")
+        _retriever: The retriever has been configured to search for information.
+        model_choice: Select model ("gpt5" or "ollama (local)")
     """
 
     if model_choice == "gpt-5-nano":
@@ -109,7 +104,7 @@ def get_llm_and_agent( _retriever, model_choice="gpt-5-nano"):
             api_key = api_key,
         )
     else:
-        raise ValueError(f"Không hỗ trợ model_choice này !")
+        raise ValueError(f"This model_choice is not supported !")
     tools = [tool]
     
     # Prompt template for agent
