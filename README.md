@@ -86,3 +86,15 @@ ollama pull qwen3:4b-instruct
 ```sh
 streamlit run app.py  
 ```
+
+## Web UI for Milvus Vector Database
+Start Milvus server (if not already running):
+```sh
+docker run -d --name milvus_standalone -p 19530:19530 -p 9091:9091 milvusdb/milvus:latest
+```
+Start Attu:
+```sh
+docker run -p 8000:3000 -e MILVUS_URL=localhost:19530 zilliz/attu:v2.6
+```
+
+Open your browser and navigate to http://localhost:8000
