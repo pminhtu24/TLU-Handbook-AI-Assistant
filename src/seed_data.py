@@ -21,16 +21,16 @@ def seed_milvus(URI_link: str,
                 use_vihuggingface: bool = False, 
                 is_local: bool = False ) -> Milvus:
     """
-    Hàm tạo và lưu vector embeddings vào Milvus từ dữ liệu local
+    Function to create and save vector embeddings to Milvus from local data
     Args:
-        URI_link (str): Đường dẫn kết nối đến Milvus
-        collection_name (str): Tên collection trong Milvus để lưu dữ liệu
-        file_source (Union[str, Any]): Tên file JSON HOẶC file object (UploadedFile)
-        use_ollama (bool): Sử dụng Ollama embeddings thay vì OpenAI
-        is_local (bool): Sử dụng data load từ local
+        URI_link (str): link to Milvus
+        collection_name (str): Name of the collection in Milvus to connect to
+        file_source (Union[str, Any]): source of data to upload
+        use_ollama (bool): Use Ollama embeddings instead of OpenAI
+        is_local (bool): Use data load from local
     
     Returns:
-        Milvus: Vector store đã được seed
+        Milvus: Vector store has been seeded
     """
 
     if use_vihuggingface:
@@ -116,12 +116,11 @@ def seed_milvus(URI_link: str,
 
 def connect_to_milvus(URI_link: str, collection_name: str):
     """
-    Hàm kết nối đến collection có sẵn trong Milvus 
     Args:
-        URI_link (str): Đường dẫn kết nối đến Milvus
-        collection_name (str): Tên collection trong Milvus cần kết nối 
+        URI_link (str): link to Milvus
+        collection_name (str): Name of the collection in Milvus to connect to
     Returns:
-        Milvus: Đối tượng Milvus đã được connect, sẵn sàng query
+        Milvus: The Milvus object is connected and ready to query.
         
     """
     embeddings = HuggingFaceEmbeddings(
