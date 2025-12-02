@@ -40,7 +40,7 @@ def get_retriever(
         ]
 
         if not documents:
-            raise ValueError(f"Không tìm thấy documents trong collection '{collection_name}'")
+            raise ValueError(f"No documents found in collection '{collection_name}'")
 
         bm25_retriever = BM25Retriever.from_documents(documents)
         bm25_retriever.k = k_retriever
@@ -64,11 +64,11 @@ def get_retriever(
             return final_retriever
         return ensemble_retriever
     except Exception as e:
-        print(f"Lỗi khi khởi tạo retriever: {str(e)}")
+        print(f"Error initializing retriever: {str(e)}")
         # Return back to default retriever with document if it errors
         default_doc = [
             Document(
-                page_content="Có lỗi xảy ra khi kết nối database. Vui lòng thử lại sau.",
+                page_content="An error occurred while connecting to the database. Please try again later.",
                 metadata = {"source": "error"}
             )
         ]

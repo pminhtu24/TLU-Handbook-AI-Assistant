@@ -34,9 +34,7 @@ class ViRanker:
             query: str,
             documents: List[Document],
     )-> List[Document]:
-        """
-        Rerank documents base on query úing FlagReranker
-        
+        """        
         Args:
             query: query from user
             documents: list of Document from retriever
