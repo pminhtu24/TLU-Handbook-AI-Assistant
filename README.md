@@ -4,6 +4,10 @@ A student-handbook retrieval-augmented chatbot for Thuy Loi University — enabl
 
 ---
 
+![Image](assets/chat_interface.jpg)
+
+---
+
 ## 🚀 What This Project Does
 
 - Converts student handbook documents (DOCX, PDF) into clean Markdown for processing.  
