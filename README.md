@@ -4,7 +4,7 @@ A student-handbook retrieval-augmented chatbot for Thuy Loi University — enabl
 
 ---
 
-![Image](assets/chat_interface.jpg)
+![Image](assets/chat_interface.png)
 
 ---
 
