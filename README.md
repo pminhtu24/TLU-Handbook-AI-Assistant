@@ -21,7 +21,7 @@ A student-handbook retrieval-augmented chatbot for Thuy Loi University — enabl
 
 ## ✨ Key Features
 
-- 📤 Bulk Import: Supports multi-file upload and drag-and-drop for processing multiple PDFs/DOCX at once.
+- 📤 **Bulk Import**: Supports multi-file upload and drag-and-drop for processing multiple PDFs/DOCX at once.
 - 📄 **DOCX / PDF → Markdown**: Automatically cleans and normalizes handbook documents for indexing.  
 - 🔎 **Hybrid Search**: Combines vector-based embeddings and BM25 for better recall & relevance.  
 - 🇻🇳 **Vietnamese Language Support**: Uses Vietnamese embeddings to handle queries and documents in Vietnamese.  
