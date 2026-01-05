@@ -1,5 +1,3 @@
-from genericpath import isdir
-from re import L
 import streamlit as st
 from dotenv import load_dotenv
 from seed_data import seed_milvus
@@ -7,8 +5,7 @@ from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from agent import (get_retriever as get_openai_retriever, 
                    get_llm_and_agent as get_openai_agent)
-from ollama_local import (get_retriever as get_ollama_retriever, 
-                          get_llm_and_agent as get_ollama_agent)
+from ollama_local import get_qa_chain, get_retriever
 import os
 import gc
 import torch
@@ -32,7 +29,6 @@ def setup_page():
 def initialize_app():
     load_dotenv()
     setup_page()
-
 
 def setup_sidebar():
     with st.sidebar:
@@ -223,7 +219,7 @@ def setup_chat_interface(model_choice: str, use_rerank: bool, rerank_top_n: int)
 
     return msgs
 
-def handle_user_input(msgs, agent_executor):
+def handle_user_input(msgs, qa_chain):
     prompt = st.chat_input("Hãy hỏi tôi bất cứ điều gì về sổ tay sinh viên Thuỷ Lợi !")
     
     if prompt:  
@@ -233,20 +229,20 @@ def handle_user_input(msgs, agent_executor):
         msgs.add_user_message(prompt)
 
         with st.chat_message("assistant"):
-            # Show thinking process in an expander
-            with st.expander(">> Xem quá trình xử lý", expanded=True):
-                st_callback = StreamlitCallbackHandler(st.container())
-                
-                chat_history = msgs.messages[:-1]
-                response = agent_executor.invoke(
-                    {"input": prompt, "chat_history": chat_history},
-                    {"callbacks": [st_callback]}
-                )
+            message_placeholder = st.empty()
+            full_response = ""
             
-            answer = response["output"]
-            st.session_state.messages.append({"role": "assistant", "content": answer})
-            msgs.add_ai_message(answer)
-            st.write(answer)
+            with st.spinner("Đang tìm kiếm và trả lời..."):
+                for chunk in qa_chain.stream(prompt):
+                    full_response += chunk
+                    message_placeholder.markdown(full_response + "▌")
+            
+            message_placeholder.markdown(full_response)
+
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            msgs.add_ai_message(full_response)
+            
+
             release_memory()
 
 #  === MAIN FUNCTION ===
@@ -261,14 +257,14 @@ def main():
             use_rerank =use_rerank,
             top_n=rerank_top_n)
         agent_executor = get_openai_agent(retriever)
+
     else:
-        retriever = get_ollama_retriever(
+        qa_chain = get_qa_chain(
             collection_name=collections_to_query,
             use_rerank=use_rerank,
-            top_n=rerank_top_n)
-        agent_executor = get_ollama_agent(retriever)
-
-    handle_user_input(msgs, agent_executor)
+            top_n=rerank_top_n
+        )
+        handle_user_input(msgs, qa_chain)
 
 if __name__ == '__main__':
     main()
