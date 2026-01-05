@@ -2,6 +2,8 @@ from langchain_classic.tools.retriever import create_retriever_tool
 from langchain_ollama import ChatOllama
 from langchain_classic.agents import create_react_agent, AgentExecutor
 from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from seed_data import connect_to_milvus
 from langchain_community.retrievers import BM25Retriever
@@ -75,67 +77,51 @@ def get_retriever(
         return BM25Retriever.from_documents(default_doc)
     
 
-def get_llm_and_agent(retriever):
-    tool = create_retriever_tool(
-        retriever,
-        "find_documents",
-        "Search for information of Student Handbook"
+def get_qa_chain(
+        collection_name: str = "student_handbook",
+        use_rerank: bool = True,
+        top_n: int = 3 ):
+    retriever = get_retriever(
+        collection_name=collection_name,
+        use_rerank=use_rerank,
+        top_n=top_n
     )
 
     llm = ChatOllama(
         model="qwen3:4b-instruct",
-        temperature=0.1,
+        temperature=0.1
     )
-    
-    tools =[tool]
 
-    # System prompt template
-    prompt = PromptTemplate.from_template("""You are ChatChitAI - chuyên gia trả lời về sổ tay sinh viên Đại học Thủy Lợi.
+    template = """Bạn là ChatChitAI - trợ lý chuyên trả lời về Sổ tay sinh viên Đại học Thủy Lợi.
 
-        Answer the following questions as best you can. You have access to the following tools:
+    Chỉ dựa vào thông tin sau để trả lời, KHÔNG bịa đặt thêm:
 
-        {tools}
+    Context:
+    {context}
 
-        Use the following format instruction:
-        ```
-        Question: the input question you must answer
-        Thought: you should always think about what to do
-        Action: the action to take, should be one of [{tool_names}]
-        Action Input: the input to the action
-        Observation: the result of the action
-        Final Answer: the final answer to the original input question
-        ```
-                                          
-        When you have a response to say to the Human, or if you do not need to use a tool, you MUST use the format:
-        ```
-        Thought: Do I need to use a tool? No
-        Final Answer: [your response here]
-        
-        ```
-        IMPORTANT RULES:
-        - ALWAYS use the find_documents tool when answering questions about student handbook
-        - DO NOT make up information if you don't have data
-        - Answer in Vietnamese
-        - Be concise and accurate
-                                                            
-        Begin!
-        
-        Use the format instruction above !
-                           
-        Previous conversation history: {chat_history}
-        Question: {input}
-        {agent_scratchpad}
-        """)
-        
+    Câu hỏi: {question}
 
-    agent = create_react_agent(llm=llm, tools=tools, prompt=prompt)
-    return AgentExecutor(
-        agent=agent, 
-        tools=tools, 
-        verbose=True, 
-        handle_parsing_errors=True,
-        max_iterations=3,
+    Trả lời ngắn gọn, chính xác bằng tiếng Việt. 
+    Nếu không có thông tin trong context thì trả lời: "Tôi không tìm thấy thông tin về vấn đề này trong sổ tay sinh viên."""" """
+
+    prompt = PromptTemplate.from_template(template)
+    # Format context đẹp, có source tài liệu
+    def format_docs(docs):
+        return "\n\n".join(
+            f"[{doc.metadata.get('source', 'unknown')}] {doc.page_content}"
+            for doc in docs
         )
-    
+
+    # Chain đơn giản: retriever → format → prompt → LLM → string
+    chain = (
+        {"context": retriever | format_docs, "question": RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    return chain
+
+
 retriever = get_retriever(use_rerank=True, top_n=3)
-agent_executor = get_llm_and_agent(retriever)
+agent_executor = get_qa_chain(use_rerank=True, top_n=3)
